@@ -1,5 +1,6 @@
 import csv 
 import re
+import math 
 
 class DataFrame:
     def __init__(self):
@@ -111,18 +112,55 @@ class DataFrame:
                 self.col_types[attr] = object
             row[attr] = list[index]
 
-    def mean(self, attr):
-        assert self.col_types[attr] in [float, int], 'Cannot calculate mean value of non-numeric columns'
+    def sum(self, attr):
         """
-        Calculate mean value of a column
+        Calculate sum of a column
+        Returns: sum, n (n is the number of non-null values)
         """
+        assert self.col_types[attr] in [float, int], 'Cannot calculate sum value of non-numeric columns'
         s = 0 # accumulate sum
         n = 0 # number of non-None values
         for row in self.rows:
             if row[attr] is not None:
                 n += 1
                 s += row[attr]
-        return s / n
+        return s, n
+
+    def mean(self, attr):
+        """
+        Calculate mean value of a column
+        Returns: mean, n (n is the number of non-null values)
+        """
+        assert self.col_types[attr] in [float, int], 'Cannot calculate mean value of non-numeric columns'
+        s, n = self.sum(attr)
+        return s / n, n
+    
+    def var(self, attr):
+        """
+        Calculate variance value of a column
+        Returns: var, n (n is the number of non-null values)
+        """
+        assert self.col_types[attr] in [float, int], 'Cannot calculate std value of non-numeric columns'
+        
+        mean, n = self.mean(attr)
+        var = 0
+
+        col = self.get_column(attr)
+        for cell in col:
+            if cell is not None:
+                var += (cell - mean) ** 2
+        var /= n
+        return var, n
+
+    def std(self, attr):
+        """
+        Calculate variance value of a column
+        Returns: std, n (n is the number of non-null values)
+        """
+        assert self.col_types[attr] in [float, int], 'Cannot calculate var value of non-numeric columns'
+        var, n = self.var(attr)
+        return math.sqrt(var), n
+        
 
     def count_na(self):
         """
@@ -137,6 +175,9 @@ class DataFrame:
                     else:
                         counter[attr] = 1
         return counter
+
+    def describe(self):
+        describe = {}
 
 def from_csv(filename):
     return DataFrame.from_csv(filename)
