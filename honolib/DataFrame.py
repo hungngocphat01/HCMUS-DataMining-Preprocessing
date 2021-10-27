@@ -10,15 +10,20 @@ class DataFrame:
     
     def count_na(self):
         """
-        Hàm đếm số lượng phần tử rỗng trên từng cột và lấy tổng
+        Hàm in ra số lượng phần tử rỗng trên từng cột và lấy tổng
         """
+        
         sum_count = 0
-        for col in self.__columns:
-            count = col.count_na()
-            sum_count += count
-            if count > 0:
-                print(col.label, '\t', count)
-        print('Total null values:', sum_count)
+        counter = {col.label: col.count_na() for col in self.__columns}
+        
+        # Độ rộng lớn nhất của các label (để format cho đẹp)
+        max_label_width = max([len(label) for label in counter])
+
+        for label, null_count in counter.items():
+            if null_count > 0:
+                print(label.ljust(max_label_width), '\t', null_count)
+        
+        print('\nTotal null values:', sum(counter.values()))
     
     def shape(self):
         """
@@ -107,6 +112,7 @@ class DataFrame:
                 if cell is None:
                     count += 1 
                     continue
+        return count
 
     def __auto_drop_row(self, threshold):
         pass 

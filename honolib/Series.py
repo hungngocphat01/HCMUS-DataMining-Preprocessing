@@ -193,15 +193,16 @@ class Series:
         """
         rnd = lambda x: round(x, 4) if x is not None else None
 
-        print('Label:', self.label)
-        print('Length:', len(self.rows))
-        print('Null values:', self.count_na())
-        print('Sum:', rnd(self.sum()))
-        print('Mean:', rnd(self.mean()))
-        print('Median:', rnd(self.median()))
-        print('Std:', rnd(self.std()))
-        print('Min-Max', self.minmax())
-        print('Mode:', self.mode())
+        print('Type:            ', self.dtype)
+        print('Length:          ', len(self.rows))
+        print('Null values:     ', self.count_na())
+        print('Label:           ', self.label)
+        print('Sum:             ', rnd(self.sum()))
+        print('Mean:            ', rnd(self.mean()))
+        print('Median:          ', rnd(self.median()))
+        print('Std:             ', rnd(self.std()))
+        print('Min-Max:         ', self.minmax())
+        print('Mode:            ', self.mode())
     
     def fill_na(self, method='mean'):
         """
