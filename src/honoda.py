@@ -14,6 +14,11 @@ def main():
     # Nhóm các lệnh để xuất thông tin cơ bản của dữ liệu (số hàng/cột, tên các cột, số hàng/cột bị null)
     stats_parser = subparsers.add_parser('stats', help='Display data statistics')
     stats_exclusive = stats_parser.add_mutually_exclusive_group()
+    stats_exclusive.add_argument('--shape', 
+        action='store_true', 
+        help='Print dataframe\'s shape'
+    )
+
     stats_exclusive.add_argument('-ls', '--list-columns',
         dest='list_columns', 
         action='store_true', 
@@ -67,7 +72,7 @@ def main():
     )
 
     # Lệnh xóa các mẫu trùng lặp 
-    uniquefilter_parser = subparsers.add_parser('unique-filter', help='Only keep unique rows from the dataframe')
+    uniquefilter_parser = subparsers.add_parser('dropdup', help='Only keep unique rows from the dataframe')
 
     # Lệnh chuẩn hóa cột 
     normalize_parser = subparsers.add_parser('normalize', help='Normalize a column')
@@ -95,7 +100,7 @@ def main():
     )
 
     parser.add_argument('input', metavar='INPUT', type=str, help='Input filename')
-    parser.add_argument('out', nargs='?', default=None, metavar='OUTPUT', type=str, help='Output filename')
+    parser.add_argument('-o', '--out', default=None, metavar='OUTPUT', type=str, help='Output filename')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increase verbosity')
 
     args = parser.parse_args()
@@ -105,6 +110,8 @@ def main():
         if args.command == 'stats':
             if args.describe:
                 ctrl.describe(args.describe)
+            elif args.shape:
+                ctrl.shape()
             elif args.list_null_columns:
                 # Yêu cầu 1: Đếm các dòng bị thiếu dữ liệu
                 ctrl.list_null_columns()
@@ -122,9 +129,9 @@ def main():
         elif args.command == 'dropna':
             # Yêu cầu 4, 5: Xóa các dòng/cột bị thiếu với ngưỡng cho trước
             ctrl.dropna(args.axis, args.threshold)
-        elif args.command == 'unique-filter':
+        elif args.command == 'dropdup':
             # Yêu cầu 6: Xóa các mẫu trùng lặp
-            ctrl.unique_filter()
+            ctrl.drop_duplicate()
         elif args.command == 'normalize':
             # Yêu cầu 7: Chuẩn hóa một thuộc tính
             ctrl.normalize(args.method, args.column)

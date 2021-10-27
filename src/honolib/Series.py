@@ -11,7 +11,7 @@ class Series:
         self.rows = []
         # Tên cột
         self.label = label
-        self.dtype = None
+        self.dtype: type = None
 
         if isinstance(obj, list):
             self.__init_from_list(obj)
@@ -208,19 +208,31 @@ class Series:
         """
         Điền giá trị rỗng cho cột
         method = ['mean' | 'med' | 'mode']
+        Nếu cột không có giá trị gì (cả cột đều rỗng) thì điền giá trị 0 cho cột.
         """
-        assert method in ['mean', 'med', 'mode'], 'Unsupported fill method'
+        assert method in ['mean', 'median', 'mode'], 'Unsupported fill method' 
         
+        if self.dtype not in [int, float]:
+            print('Forcing method "mode" for categorical column')
+            method = 'mode'
+
         if method == 'mean':
             fill_value = self.mean()
-        elif method == 'med':
+        elif method == 'median':
             fill_value = self.median()
         elif method == 'mode':
-            fill_value, _ = self.mode()
+            fill_value, freq = self.mode()
         
         for i, row in enumerate(self.rows):
             if row is None:
-                self.rows[i] = fill_value
+                if self.dtype is not None:
+                    # Đôi khi cột là int nhưng mean là float nên ta cần ép kiểu lại cho đúng
+                    self.rows[i] = self.dtype(fill_value)
+                else: 
+                    self.rows[i] = 0
+
+        if self.dtype is None:
+            self.dtype = 0
     
     def normalize(self, method='zscore'):
         """
@@ -243,3 +255,6 @@ class Series:
                 self.rows[i] = (row - mean) / std
             elif method == 'minmax':
                 self.rows[i] = (row - min_value) / (max_value - min_value)
+        
+        # Sau khi chuẩn hóa, dữ liệu chắc chắn trở thành số thập phân
+        self.dtype = float

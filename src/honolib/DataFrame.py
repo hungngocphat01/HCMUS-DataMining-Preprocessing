@@ -1,12 +1,12 @@
 import csv
-from os import sep 
 import re
 import math 
+import copy
 from honolib.Series import Series
 
 class DataFrame:
     def __init__(self):
-        self.__columns = []
+        self._columns = []
     
     def count_na(self):
         """
@@ -14,7 +14,7 @@ class DataFrame:
         """
         
         sum_count = 0
-        counter = {col.label: col.count_na() for col in self.__columns}
+        counter = {col.label: col.count_na() for col in self._columns}
         
         # Độ rộng lớn nhất của các label (để format cho đẹp)
         max_label_width = max([len(label) for label in counter])
@@ -29,16 +29,16 @@ class DataFrame:
         """
         Kích thước của dataframe
         """
-        if len(self.__columns) == 0:
+        if len(self._columns) == 0:
             return 0,
-        return len(self.__columns[0].rows), len(self.__columns)
+        return len(self._columns[0].rows), len(self._columns)
 
     def get_row(self, index):
         """
         Lấy ra data của hàng từ index
         """
         row_data = []
-        for c in self.__columns:
+        for c in self._columns:
             row_data.append(c.rows[index])
         return row_data
 
@@ -50,14 +50,24 @@ class DataFrame:
         assert len(obj) == shape[1], 'Input array length and dataframe width does not match'
         assert index < shape[1], 'Index out of bound'
 
-        for col_index, col in enumerate(self.__columns):
+        for col_index, col in enumerate(self._columns):
             col.rows[index] = obj[col_index]
     
+    def append_row(self, obj):
+        """
+        Chèn một hàng vào bảng
+        """
+        shape = self.shape()
+        assert len(obj) == shape[1], 'Input array length and dataframe width does not match'
+
+        for index, col in enumerate(self._columns):
+            col.rows.append(obj[index])
+        
     def get_column(self, label) -> Series:
         """
         Lấy ra tham chiếu tới một cột từ tên cột
         """
-        for col in self.__columns:
+        for col in self._columns:
             if col.label == label:
                 return col 
         raise AttributeError('Column not found')
@@ -68,7 +78,7 @@ class DataFrame:
         """
         assert len(obj) == self.shape()[0], 'Length mismatch'
 
-        for col in self.__columns:
+        for col in self._columns:
             if col.label == label:
                 col.rows = obj
                 return 
@@ -80,10 +90,10 @@ class DataFrame:
         """
         assert type(obj) == Series
         assert len(obj) == self.shape()[0]
-        self.__columns.append(obj)
+        self._columns.append(obj)
 
     def delete_row(self, index):
-        for col in self.__columns:
+        for col in self._columns:
             del col.rows[index]
     
     def iterrows(self):
@@ -100,7 +110,7 @@ class DataFrame:
         """
         Lấy ra danh sách các cột của dataframe
         """
-        return [col.label for col in self.__columns]
+        return [col.label for col in self._columns]
     
     def count_na_rows(self):
         """
@@ -111,42 +121,85 @@ class DataFrame:
             for cell in row:
                 if cell is None:
                     count += 1 
-                    continue
+                    break
         return count
 
     def __auto_drop_row(self, threshold):
-        pass 
+        """
+        Hàm drop các hàng với tỉ lệ null cho trước
+        """
+        n_rows, n_cols = self.shape()
+        idx = 0
+
+        while idx < n_rows:
+            row = self.get_row(idx)
+            # Đếm số lượng cột null
+            count_null = 0
+            for col in row:
+                if col is None: 
+                    count_null += 1
+            null_perc = count_null / n_cols
+
+            # Drop hàng nếu tỉ lệ >= threshold
+            if null_perc >= threshold:
+                self.delete_row(idx)
+                n_rows -= 1
+            else: 
+                idx += 1
 
     def __auto_drop_col(self, threshold):
         """
         Private: hàm drop các cột với tỉ lệ null cho trước
         """
-
-        i = 0 
-        while i < len(self.__columns):
-            col = self.__columns[i]
+        idx = 0 
+        while idx < len(self._columns):
+            col = self._columns[idx]
             # Tính tỉ lệ null
             null_perc = col.count_na() / len(col)
-            if null_perc > threshold:
-                print('Deleted "', col.label, '"; Null = ', null_perc, '%', sep='')
-                del self.__columns[i]
+            if null_perc >= threshold:
+                print('Deleted "', col.label, '"; Null = ', null_perc * 100, '%', sep='')
+                del self._columns[idx]
             else: 
-                i += 1
-
+                idx += 1
     
-    def auto_drop(self, axis=0, threshold=0.5):
+    def drop_na(self, axis=0, threshold=0.5):
         """
         Xóa các cột hoặc hàng bị thiếu dữ liệu với ngưỡng cho trước
         n = 
         """
         assert threshold <= 1 and threshold >= 0
         if axis == 0:
-            self.__auto_drop_row(self, threshold)
+            self.__auto_drop_row(threshold)
         elif axis == 1: 
-            self.__auto_drop_col(self, threshold)
+            self.__auto_drop_col(threshold)
         else: 
             raise AttributeError('Invalid axis. Only accept 0 or 1')
     
+    def drop_duplicate(self):
+        """
+        Hàm xóa các hàng trùng lặp
+        Trả về: DataFrame chứa các hàng không trùng
+        """
+        # Lặp qua tất cả các hàng và xây dựng danh sách các hàng không trùng lặp
+        duplicate_count = 0
+        unique_rows = [] 
+        for row in self.iterrows():
+            # Drop cột chứa index và chuyển thành tuple (immutable thì dùng toán tử in mới chính xác)
+            row = tuple(row[1:])
+            if row not in unique_rows:
+                unique_rows.append(row)
+            else:
+                duplicate_count += 1
+        
+        # Dựng lại dataframe mới 
+        df = DataFrame()
+        for col in self._columns:
+            series = Series(None, label=col.label)
+            df._columns.append(series)
+        for row in unique_rows:
+            df.append_row(row)
+        
+        return df
 
     def read_csv(self, filename):
             """
@@ -167,7 +220,24 @@ class DataFrame:
             # Từ data thô, construct các series tương ứng
             for col in columns:
                 series = Series(columns[col], col)
-                self.__columns.append(series)
+                self._columns.append(series)
+
+    def write_csv(self, filename):
+        """
+        Hàm xuất dataframe ra CSV
+        """
+        df = copy.deepcopy(self)
+        for column in df._columns:
+            column._process_empty_cells(operation='write')
+
+        with open(filename, 'wt', newline='') as f:
+            column_labels = df.get_column_labels()
+            writer = csv.DictWriter(f, fieldnames=column_labels)
+            writer.writeheader()
+            for row in df.iterrows():
+                # Bỏ cột index
+                row = row[1:]
+                writer.writerow({cell[0]: cell[1] for cell in zip(column_labels, row)})
 
 def read_csv(filename):
     df = DataFrame()

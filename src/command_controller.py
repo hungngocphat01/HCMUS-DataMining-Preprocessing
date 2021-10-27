@@ -8,7 +8,7 @@ class Controller:
         self.input_filename = input_filename
         self.output_filename = output_filename
         self.verbose = verbose
-        self.df = hd.read_csv(self.input_filename)
+        self.df: hd.DataFrame = hd.read_csv(self.input_filename)
 
         if verbose:
             print('File read into memory.')
@@ -19,6 +19,9 @@ class Controller:
     
     def list_null_columns(self):
         self.df.count_na()
+    
+    def shape(self):
+        print(self.df.shape())
     
     def count_null_rows(self):
         print('Number of null rows in dataframe:', self.df.count_na_rows())
@@ -32,16 +35,26 @@ class Controller:
             print(column.ljust(col_width), '\t', dtype)
     
     def fillna(self, method, column):
-        print('Fillna', method, column)
+        if column is None: 
+            for col in self.df._columns:
+                col.fill_na(method=method)
+        else: 
+            col = self.df.get_column(column)
+            col.fill_na(method=method)
+        self.df.write_csv(self.output_filename)
     
     def dropna(self, axis, threshold):
-        print('Drop na', axis, threshold)
+        self.df.drop_na(axis=axis, threshold=threshold)
+        self.df.write_csv(self.output_filename)
     
-    def unique_filter(self):
-        print('Unique filter')
+    def drop_duplicate(self):
+        new_df = self.df.drop_duplicate()
+        new_df.write_csv(self.output_filename)
 
     def normalize(self, method, column):
-        print('Normalize', method, column)
+        col = self.df.get_column(column)
+        col.normalize(method=method)
+        self.df.write_csv(self.output_filename)
     
     def evaluate(self, expression):
         ...
