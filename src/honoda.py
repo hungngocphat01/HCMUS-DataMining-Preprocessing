@@ -96,7 +96,6 @@ def main():
         help='Specify the output column name',
         metavar='COL', 
         type=str, 
-        required=True
     )
 
     parser.add_argument('input', metavar='INPUT', type=str, help='Input filename')
@@ -137,7 +136,7 @@ def main():
             ctrl.normalize(args.method, args.column)
         elif args.command == 'evaluate':
             # Yêu cầu 8: Tính giá trị biểu thức 
-            ctrl.evaluate(args.expression)
+            ctrl.evaluate(args.expression, args.column)
         else: 
             print('Unknown command:', args.command)
     except KeyboardInterrupt:

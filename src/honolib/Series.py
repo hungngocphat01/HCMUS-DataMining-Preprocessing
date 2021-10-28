@@ -1,4 +1,5 @@
 import math 
+import operator
 from honolib.utils import detect_type_value
 
 class Series:
@@ -11,17 +12,29 @@ class Series:
         self.rows = []
         # Tên cột
         self.label = label
+        # Kiểu dữ liệu của cột (để kiểm tra tính hợp lệ của dữ liệu)
         self.dtype: type = None
 
+        # Do python không support constructor overloading như C++ nên em phải viết 2 hàm riêng cho công đoạn khởi tạo mảng
         if isinstance(obj, list):
             self.__init_from_list(obj)
+        elif isinstance(obj, int):
+            self.__init_from_size(obj)
+        
+        # Đoán kiểu dữ liệu của cột
+        self._process_col_type()
 
     def __init_from_list(self, obj):
+        # Contructor nếu người dùng truyền vào data là 1 list
         self.rows = obj
         self._process_empty_cells(operation='read')
-        self.__process_col_type()
+        
+    
+    def __init_from_size(self, size):
+        # Constructor nếu người dùng truyền vào một số nguyên (khởi tạo mảng rỗng có n phần tử)
+        self.rows = [0 for i in range(size)]
 
-    def __process_col_type(self):
+    def _process_col_type(self):
         """
         Hàm để xử lý tự động kiểu dữ liệu của cột
         """
@@ -33,11 +46,14 @@ class Series:
             # Nếu trong cột có kiểu dữ liệu không đồng nhất -> cột có kiểu object
             if self.dtype is None:
                 self.dtype = t
+            # Nếu kiểu dữ liệu của cột khác của hàng, nhưng cả 2 đều là int hoặc float thì cột mang kiểu float
+            elif (self.dtype, t) in ((float, int), (int, float)):
+                self.dtype = float
             elif self.dtype != t:
                 self.dtype = object
 
             # Ép kiểu của hàng sang kiểu dữ liệu đúng của nó
-            self.rows[index] = t(row)
+            self[index] = t(row)
 
 
     def _process_empty_cells(self, operation='read'):
@@ -50,29 +66,34 @@ class Series:
         assert operation in ('read', 'write'), 'Operation not supported'
 
         for index, row in enumerate(self.rows):
-            if operation == 'read' and len(row) == 0:
-                self.rows[index] = None
+            if not isinstance(row, str):
+                pass 
+            elif operation == 'read' and len(row) == 0:
+                self[index] = None
             elif operation == 'write' and row is None:
-                self.rows[index] = ''
+                self[index] = ''
     
-    def __len__(self):
+    def __len__(self) -> int:
+        """
+        Số phần tử (hàng) của cột
+        """
         return len(self.rows)
     
     def cast(self, dtype: type):
         """
         Hàm để ép kiểu cột sang kiểu dữ liệu tương ứng
-        Không ép kiểu được thì gán là None
+        Không ép kiểu được thì gán kiểu dữ liệu `self.dtype` là None
         """
         for index, row in enumerate(self.rows):
             try:
-                self.rows[index] = dtype(row)
+                self[index] = dtype(row)
             except:
-                self.rows[index] = None
+                self[index] = None
         self.dtype = dtype
     
-    def count_na(self):
+    def count_na(self) -> int:
         """
-        Đếm số hàng bị thiếu trong cột
+        Trả về hàng bị thiếu trong cột
         """
         count = 0
         for row in self.rows:
@@ -80,15 +101,15 @@ class Series:
                 count += 1
         return count
 
-    def count_non_na(self):
+    def count_non_na(self) -> int:
         """
-        Đếm số hàng không bị thiếu trong cột
+        Trả về hàng không bị thiếu trong cột
         """
         return len(self.rows) - self.count_na()
     
-    def sum(self):
+    def sum(self) -> float:
         """
-        Tính tổng cột
+        Trả về tổng của cột
         """
         if self.dtype not in [int, float]:
             return None 
@@ -99,9 +120,9 @@ class Series:
                 s += row 
         return s 
     
-    def mean(self):
+    def mean(self) -> float:
         """
-        Tính giá trị trung bình của cột
+        Trả về giá trị trung bình của cột
         """
         if self.dtype not in [int, float]:
             return None 
@@ -110,9 +131,9 @@ class Series:
         s = self.sum()
         return s/n
     
-    def std(self):
+    def std(self) -> float:
         """
-        Tính độ lệch chuẩn của cột
+        Trả về độ lệch chuẩn của cột
         """
         if self.dtype not in [int, float]:
             return None 
@@ -126,9 +147,9 @@ class Series:
             s += (row - m) ** 2
         return math.sqrt(s / n)
     
-    def frequency_table(self):
+    def frequency_table(self) -> dict:
         """
-        Lập bảng tần suất các giá trị phân biệt trong bảng (bao gồm None)
+        Trả về bảng tần suất các giá trị phân biệt trong bảng (bao gồm None)
         """
         frequency_table = {}
         for row in self.rows:
@@ -140,8 +161,9 @@ class Series:
     
     def mode(self):
         """
-        Tính giá trị mode của cột. Nếu có nhiều mode chỉ lấy giá trị đầu tiên.
-        Trả về: mode_value, frequency
+        Trả về giá trị mode của cột. Nếu có nhiều mode chỉ lấy giá trị đầu tiên.
+        Trả về: mode_value, frequency.
+        Nếu cả cột rỗng, trả về (0, 0)
         """
         frequency_table = self.frequency_table()
         max_freq = 0
@@ -155,7 +177,7 @@ class Series:
     
     def minmax(self):
         """
-        Hàm tính giá trị min và max của cột
+        Trả về giá trị min và max của cột
         """
         if self.dtype not in [int, float]:
             return None 
@@ -174,7 +196,7 @@ class Series:
     
     def median(self):
         """
-        Hàm tính giá trị trung vị của cột
+        Trả về giá trị trung vị của cột
         """
         if self.dtype not in [int, float]:
             return None 
@@ -227,9 +249,9 @@ class Series:
             if row is None:
                 if self.dtype is not None:
                     # Đôi khi cột là int nhưng mean là float nên ta cần ép kiểu lại cho đúng
-                    self.rows[i] = self.dtype(fill_value)
+                    self[i] = self.dtype(fill_value)
                 else: 
-                    self.rows[i] = 0
+                    self[i] = 0
 
         if self.dtype is None:
             self.dtype = 0
@@ -252,9 +274,57 @@ class Series:
             if row is None:
                 continue
             if method == 'zscore':
-                self.rows[i] = (row - mean) / std
+                self[i] = (row - mean) / std
             elif method == 'minmax':
-                self.rows[i] = (row - min_value) / (max_value - min_value)
+                self[i] = (row - min_value) / (max_value - min_value)
         
         # Sau khi chuẩn hóa, dữ liệu chắc chắn trở thành số thập phân
         self.dtype = float
+    
+    def __element_wise_operation(self, operand, operatr, operator_char):
+        """
+        Private: hàm xử lý các phép tính trên cột
+        Nếu 1 trong 2 giá trị tại hàng tương ứng bằng None thì kết quả tại hàng đó sẽ là None.
+        - operand: toán hạng còn lại của phép tính (toán hạng thứ nhất là self).
+        - operatr: tham chiếu đến hàm thực hiện toán tử của phép tính.
+        - operator_char: kí hiệu toán tử của phép tính. Dùng để ghi tên cột kết quả
+        """
+        # Nếu "cột" kia có kiểu dữ liệu là số thì biến nó thành mảng bằng cách duplicate lên n lần (broadcast)
+        if type(operand) in (int, float):
+            operand = Series([operand] * len(self), str(operand))
+
+        assert len(self) == len(operand), 'Series length does not match'
+        # Tạo series chứa kết quả trả về
+        result = Series(len(self), self.label + operator_char + operand.label)
+        # Lặp qua từng hàng và tính giá trị tương ứng
+        for i, row in enumerate(self.rows):
+            if None in (row, operand[i]):
+                result[i] = None 
+            else:
+                result[i] = operatr(row, operand[i])
+        
+        # Đoán kiểu dữ liệu trả về cho cột 
+        result._process_col_type()
+        return result
+    
+    # Các phương thức bên dưới là nạp chồng toán tử. Em thấy không có gì cần giải thích thêm.
+    def __add__(self, operand):
+        return self.__element_wise_operation(operand, operator.add, '+')
+
+    def __sub__(self, operand):
+        return self.__element_wise_operation(operand, operator.sub, '-')
+
+    def __mul__(self, operand):
+        return self.__element_wise_operation(operand, operator.mul, '*')
+
+    def __truediv__(self, operand):
+        return self.__element_wise_operation(operand, operator.truediv, '/')
+    
+    def __getitem__(self, index: int):
+        return self.rows[index]
+    
+    def __setitem__(self, index: int, value):
+        self.rows[index] = value
+    
+    def __delitem__(self, index: int):
+        del self.rows[index]

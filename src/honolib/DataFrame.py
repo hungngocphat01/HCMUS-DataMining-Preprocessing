@@ -25,37 +25,37 @@ class DataFrame:
         
         print('\nTotal null values:', sum(counter.values()))
     
-    def shape(self):
+    def shape(self) -> tuple:
         """
-        Kích thước của dataframe
+        Trả về kích thước (hàng, cột) của dataframe
         """
         if len(self._columns) == 0:
-            return 0,
+            return 0, 0
         return len(self._columns[0].rows), len(self._columns)
 
-    def get_row(self, index):
+    def get_row(self, index: int) -> list:
         """
-        Lấy ra data của hàng từ index
+        Trả về data của hàng từ `index`
         """
         row_data = []
         for c in self._columns:
-            row_data.append(c.rows[index])
+            row_data.append(c[index])
         return row_data
 
-    def set_row(self, index, obj):
+    def set_row(self, index: int, obj):
         """
-        Gán data của hàng từ index
+        Gán data của hàng tại vị trí `index` bằng mảng `obj`. Mỗi phần tử của `obj` ứng với mỗi cột của hàng.
         """
         shape = self.shape()
         assert len(obj) == shape[1], 'Input array length and dataframe width does not match'
         assert index < shape[1], 'Index out of bound'
 
         for col_index, col in enumerate(self._columns):
-            col.rows[index] = obj[col_index]
+            col[index] = obj[col_index]
     
     def append_row(self, obj):
         """
-        Chèn một hàng vào bảng
+        Chèn một hàng vào bảng. Mỗi phần tử của `obj` ứng với mỗi cột của hàng.
         """
         shape = self.shape()
         assert len(obj) == shape[1], 'Input array length and dataframe width does not match'
@@ -65,16 +65,16 @@ class DataFrame:
         
     def get_column(self, label) -> Series:
         """
-        Lấy ra tham chiếu tới một cột từ tên cột
+        Lấy ra tham chiếu tới một cột từ tên cột `label`.
         """
         for col in self._columns:
             if col.label == label:
                 return col 
-        raise AttributeError('Column not found')
+        raise AttributeError('Column not found: ' + label)
     
     def set_column(self, label: str, obj: Series):
         """
-        Gán cột
+        Gán cột có tên `label` bằng một object `Series` khác.
         """
         assert len(obj) == self.shape()[0], 'Length mismatch'
 
@@ -84,37 +84,41 @@ class DataFrame:
                 return 
         raise AttributeError('Column not found')
     
-    def append_column(self, label: str, obj: Series):
+    def append_column(self, obj: Series):
         """
-        Chèn thêm cột
+        Chèn thêm một cột vào bảng.
         """
+        n_rows, n_col = self.shape()
         assert type(obj) == Series
-        assert len(obj) == self.shape()[0]
+        assert n_rows == 0 or len(obj) == n_rows
         self._columns.append(obj)
 
     def delete_row(self, index):
-        for col in self._columns:
-            del col.rows[index]
-    
-    def iterrows(self):
         """
-        Iterator để duyệt qua từng hàng 
-        Phần tử đầu luôn là index của hàng
+        Hàm xóa hàng tại vị trí `index` khỏi bảng.
+        """
+        for col in self._columns:
+            del col[index]
+    
+    def iterrows(self) -> list:
+        """
+        Iterator để duyệt qua từng hàng.
+        Trả về một mảng các cột của hàng. Phần tử đầu luôn là index của hàng.
         """
         shape = self.shape()
         for r in range(shape[0]):
             row_data = [r] + self.get_row(r)
             yield row_data
         
-    def get_column_labels(self):
+    def get_column_labels(self) -> list:
         """
-        Lấy ra danh sách các cột của dataframe
+        Trả về danh sách các tên cột của dataframe
         """
         return [col.label for col in self._columns]
     
-    def count_na_rows(self):
+    def count_na_rows(self) -> int:
         """
-        Hàm đếm số lượng hàng bị thiếu dữ liệu (hàng mà có ít nhất 1 cột bị thiếu)
+        Trả về số lượng hàng bị thiếu dữ liệu (hàng mà có ít nhất 1 cột bị thiếu).
         """
         count = 0
         for row in self.iterrows():
@@ -126,7 +130,7 @@ class DataFrame:
 
     def __auto_drop_row(self, threshold):
         """
-        Hàm drop các hàng với tỉ lệ null cho trước
+        Private: hàm drop các hàng với tỉ lệ null cho trước
         """
         n_rows, n_cols = self.shape()
         idx = 0
@@ -164,8 +168,9 @@ class DataFrame:
     
     def drop_na(self, axis=0, threshold=0.5):
         """
-        Xóa các cột hoặc hàng bị thiếu dữ liệu với ngưỡng cho trước
-        n = 
+        Xóa các cột hoặc hàng bị thiếu dữ liệu với ngưỡng cho trước.
+        - `axis`: nếu là 0 thì xóa hàng, nếu là 1 thì xóa cột.
+        - `threshold`: tỉ lệ null của một cột/hàng để bị xóa.
         """
         assert threshold <= 1 and threshold >= 0
         if axis == 0:

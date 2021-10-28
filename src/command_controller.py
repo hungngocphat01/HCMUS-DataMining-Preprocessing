@@ -33,6 +33,7 @@ class Controller:
         for column in columns:
             dtype = self.df.get_column(column).dtype
             print(column.ljust(col_width), '\t', dtype)
+        print('Total:', len(columns), 'columns.')
     
     def fillna(self, method, column):
         if column is None: 
@@ -56,5 +57,13 @@ class Controller:
         col.normalize(method=method)
         self.df.write_csv(self.output_filename)
     
-    def evaluate(self, expression):
-        ...
+    def evaluate(self, expression, label):
+        expr = hd.SeriesExpression(expression, self.df)
+        result = expr.evaluate()
+        if label is None:
+            label = 'out'
+        result.label = label
+
+        new_df = hd.DataFrame()
+        new_df.append_column(result)
+        new_df.write_csv(self.output_filename)
