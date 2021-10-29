@@ -1,5 +1,7 @@
+# HUNGNGOCPHAT - 19120615
 # Đây là file để convert jupyter notebook sang latex rồi compile ra pdf
 # Chỉ hoạt động trên *nix 
+# Cần phải có docker và phải docker pull texlive/texlive trứoc
 
 PDF:='BaoCaoLab01'
 NOTEBOOKS:= report1 report2
@@ -15,7 +17,7 @@ $(PDF): main.tex
 	mv $@.pdf ../
 
 main.tex: tmp/main.ipynb 
-	jupyter nbconvert --to latex $^
+	jupyter nbconvert --to latex $^ --template-file my_report.tex.j2 
 	mv tmp/$@ .
 
 tmp/main.ipynb: $(patsubst %,%.ipynb,$(NOTEBOOKS))
@@ -25,6 +27,6 @@ tmp/main.ipynb: $(patsubst %,%.ipynb,$(NOTEBOOKS))
 
 .PHONY: clean 
 clean: 
-	rm *.tex
+	rm -f *.tex
 	rm -rf build 
 	rm -rf tmp
