@@ -226,7 +226,7 @@ class Series:
         print('Min-Max:         ', self.minmax())
         print('Mode:            ', self.mode())
     
-    def fill_na(self, method='mean'):
+    def fill_na(self, method='mean', verbose=False):
         """
         Điền giá trị rỗng cho cột
         method = ['mean' | 'med' | 'mode']
@@ -235,8 +235,9 @@ class Series:
         assert method in ['mean', 'median', 'mode'], 'Unsupported fill method' 
         
         if self.dtype not in [int, float]:
-            print('Forcing method "mode" for categorical column')
             method = 'mode'
+            if verbose: 
+                print('Forcing method "mode" for categorical column')
 
         if method == 'mean':
             fill_value = self.mean()
