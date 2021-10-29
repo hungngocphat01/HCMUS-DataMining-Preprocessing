@@ -1,0 +1,63 @@
+
+% Default to the notebook output style
+((* if not cell_style is defined *))
+    ((* set cell_style = 'style_ipython.tex.j2' *))
+((* endif *))
+
+% Inherit from the specified cell style.
+((* extends cell_style *))
+
+
+%===============================================================================
+% Latex Book
+%===============================================================================
+
+    ((* block packages *))
+        ((( super() )))
+        \usepackage{datetime}
+    ((* endblock packages *))
+
+((* block predoc *))
+    \newdateformat{monthyeardate}{%
+    \monthname[\THEMONTH], \THEYEAR}
+((* block titlepage *))
+\begin{titlepage}
+    \vspace*{\fill}
+
+    \centering
+    \textsc{\LARGE Trường Đại học Khoa học Tự nhiên}\\[0.5cm]
+    \textsc{\large ĐẠI HỌC QUỐC GIA TP. HCM}\\[1.5cm]
+    
+    {\LARGE\bfseries ((( nb.metadata.get('subject', '') )))}\\[1.5cm]
+
+    \rule{\textwidth}{0.4pt} \\[0.4cm]
+    {
+        \huge \bfseries ((( nb.metadata.get('title', '') )))
+    }
+    \rule{\textwidth}{0.4pt}\\[1.5cm]
+
+    \includegraphics[width=0.3\textwidth]{images/khtn.jpg}\\[1.5cm]
+    
+    {\Large 19120615 -- Hùng Ngọc Phát}\\[0.5cm]
+
+    {\large \monthyeardate\today}  
+    
+    \vspace*{\fill}
+
+\end{titlepage}
+((* endblock titlepage *))
+
+    ((* block tableofcontents *))\tableofcontents((* endblock tableofcontents *))
+((* endblock predoc *))
+
+((* block title -*))
+    ((( super() )))
+((*- endblock title *))
+
+((* block docclass *))
+\documentclass{report}
+((* endblock docclass *))
+
+((* block markdowncell scoped *))
+((( cell.source | citation2latex | strip_files_prefix | convert_pandoc('markdown+tex_math_double_backslash', 'json',extra_args=[]) | resolve_references | convert_pandoc('json','latex', extra_args=["--top-level-division=chapter"]) )))
+((* endblock markdowncell *))

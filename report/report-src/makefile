@@ -17,7 +17,7 @@ $(PDF): main.tex
 	mv $@.pdf ../
 
 main.tex: tmp/main.ipynb 
-	jupyter nbconvert --to latex $^ --template-file my_report.tex.j2 
+	jupyter nbconvert --to latex $^ --template-file $(shell pwd)/report_template.tex.j2 
 	mv tmp/$@ .
 
 tmp/main.ipynb: $(patsubst %,%.ipynb,$(NOTEBOOKS))
