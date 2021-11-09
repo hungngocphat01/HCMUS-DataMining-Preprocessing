@@ -19,6 +19,7 @@ $(PDF): main.tex
 main.tex: tmp/main.ipynb 
 	jupyter nbconvert --to latex $^ --template-file $(shell pwd)/report_template.tex.j2 
 	mv tmp/$@ .
+	sed -i '/\\begin{Verbatim/ s/\]/,fontsize=\\footnotesize]/g' $@
 
 tmp/main.ipynb: $(patsubst %,%.ipynb,$(NOTEBOOKS))
 	rm -f $@
